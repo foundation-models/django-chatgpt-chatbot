@@ -2,29 +2,45 @@ from django.shortcuts import render,redirect
 from django.http import JsonResponse
 import openai
 
-from django.contrib import auth
-from django.contrib.auth.models import User
-from .models import Chat
+
 
 from django.utils import timezone
+import os
+import string
+from openai import OpenAI
+
+client = OpenAI(
+  api_key=os.environ['OPENAI_API_KEY'],  # this is also the default, it can be omitted
+)
 
 openai_api_key = 'YOUR_API_KEY' # Replace YOUR_API_KEY with your openai apikey 
-openai.api_key = openai_api_key 
+openai.api_key = openai_api_key
+ 
+openai.api_type = "open_ai"
+openai.api_base = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
+model_name = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
+instruction = os.getenv("INSTRUCTION")
+
 
 def ask_openai(message):
-    response = openai.ChatCompletion.create(
-        model = "gpt-3.5-turbo-16k-0613",
+    if instruction:
+        template = string.Template(instruction)
+        record = {'input': message }
+        message = template.substitute(record)
+    completion = client.completions.create((
+        model = model_name,
         # prompt = message,
         # max_tokens=150,
         # n=1,
         # stop=None,
         # temperature=0.7,
+        # stream=True,
         messages=[
             {"role": "system", "content": "You are an helpful assistant."},
             {"role": "user", "content": message},
         ]
     )
-    answer = response.choices[0].message.content.strip()
+    answer = completion.choices[0].text
     return answer
 
 # Create your views here.
